@@ -148,39 +148,36 @@ int main(int argc, char **argv) {
 	ofstream outfile(argv[2], ofstream::out);
 
 	string line;
-	bool newline = false;
 	int countParagraph = 0;
-	Word pre("","","","");
-	//ostringstream oss;
-	
-	outfile << "<s> ";
 
 	while (getline(infile, line)) {
-	    istringstream iss(line);
-	    string word;
-
-	    if (newline && line.find_first_not_of(" \t\n\v\f\r") != string::npos) outfile << "<e>\n<s> ";
-
-		if (line.find_first_not_of(" \t\n\v\f\r") == string::npos) {//(line == "") {
-			newline = true;
-			countParagraph++;
+		string paragraph = line;
+		while (line.find_first_not_of(" \t\n\v\f\r") != string::npos && getline(infile, line)) {
+			paragraph = paragraph + " " + line;
 		}
-	    else newline = false;
+		if (paragraph.find_first_not_of(" \t\n\v\f\r") == string::npos) continue;
 
-	    while (iss >> word) {
+		istringstream iss(paragraph);
+		string word;
+		Word pre("","","","");
+
+		outfile << "<s> ";
+
+		while (iss >> word) {
 	    	Word cur = clean_UTF8(word);
 	    	if (pre.cleanword != "") outfile << addMidTag(pre, cur) << " ";
 			pre = cur;
 	    }
-	    if (pre.cleanword != "") outfile << pre.cleanword << " ";
+	    if (pre.cleanword != "") {
+	    	outfile << pre.cleanword << " ";
+	    	outfile << "<e>\n";
+	    	countParagraph++;
+	    }
 	}
 	
-	outfile << "<e>";
 	outfile.close();
 
 	cout << "#paragraph: " << countParagraph << endl;
 
 	return 0;
 }
-
-
