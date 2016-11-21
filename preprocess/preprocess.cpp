@@ -172,8 +172,8 @@ int main(int argc, char **argv) {
 	    	if (pre.cleanword != "") outfile << addMidTag(pre, cur) << " ";
 			pre = cur;
 	    }
+	    if (pre.cleanword != "") outfile << pre.cleanword << " ";
 	}
-	if (pre.cleanword != "") outfile << pre.cleanword << " ";
 	
 	outfile << "<e>";
 	outfile.close();
