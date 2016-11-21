@@ -17,7 +17,6 @@ using namespace std;
 int main(int argc, char **argv) {
 	
 	ifstream infile(argv[1]);
-	//ofstream outfile(argv[2], ofstream::out);
 	//int ngram = atoi(argv[3]);
 
 	string line;
