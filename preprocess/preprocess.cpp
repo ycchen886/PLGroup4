@@ -99,36 +99,36 @@ Word clean_UTF8(string word) {
 // Determine if words contain the punctuation which shows the end of a sentence.
 bool isEndOfSentence(string words) {
 	istringstream iss(words);
-    string word;
+	string word;
 
-    while (iss >> word) {
-    	if (word == "." || word == "!" || word == "?") return true;
-    }
-    return false;
+	while (iss >> word) {
+		if (word == "." || word == "!" || word == "?") return true;
+	}
+	return false;
 }
 
 // Convert unicode to UTF8 string
 string UnicodeToUTF8(unsigned int codepoint){
-    string out;
+	string out;
 
-    if (codepoint <= 0x7f)
-        out.append(1, static_cast<char>(codepoint));
-    else if (codepoint <= 0x7ff) {
-        out.append(1, static_cast<char>(0xc0 | ((codepoint >> 6) & 0x1f)));
-        out.append(1, static_cast<char>(0x80 | (codepoint & 0x3f)));
-    }
-    else if (codepoint <= 0xffff) {
-        out.append(1, static_cast<char>(0xe0 | ((codepoint >> 12) & 0x0f)));
-        out.append(1, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
-        out.append(1, static_cast<char>(0x80 | (codepoint & 0x3f)));
-    }
-    else {
-        out.append(1, static_cast<char>(0xf0 | ((codepoint >> 18) & 0x07)));
-        out.append(1, static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
-        out.append(1, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
-        out.append(1, static_cast<char>(0x80 | (codepoint & 0x3f)));
-    }
-    return out;
+	if (codepoint <= 0x7f)
+		out.append(1, static_cast<char>(codepoint));
+	else if (codepoint <= 0x7ff) {
+		out.append(1, static_cast<char>(0xc0 | ((codepoint >> 6) & 0x1f)));
+		out.append(1, static_cast<char>(0x80 | (codepoint & 0x3f)));
+	}
+	else if (codepoint <= 0xffff) {
+		out.append(1, static_cast<char>(0xe0 | ((codepoint >> 12) & 0x0f)));
+		out.append(1, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+		out.append(1, static_cast<char>(0x80 | (codepoint & 0x3f)));
+	}
+	else {
+		out.append(1, static_cast<char>(0xf0 | ((codepoint >> 18) & 0x07)));
+		out.append(1, static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
+		out.append(1, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+		out.append(1, static_cast<char>(0x80 | (codepoint & 0x3f)));
+	}
+	return out;
 }
 
 // Tests for clean_UTF8
@@ -171,12 +171,12 @@ int main(int argc, char **argv) {
 	    	Word cur = clean_UTF8(word);
 	    	if (pre.cleanword != "") outfile << addMidTag(pre, cur) << " ";
 			pre = cur;
-	    }
-	    if (pre.cleanword != "") {
-	    	outfile << pre.cleanword << " ";
-	    	outfile << "<e>\n";
-	    	countParagraph++;
-	    }
+		}
+		if (pre.cleanword != "") {
+			outfile << pre.cleanword << " ";
+			outfile << "<e>\n";
+			countParagraph++;
+		}
 	}
 	
 	outfile.close();

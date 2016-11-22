@@ -105,14 +105,14 @@ string sampleWord(string prepre, string pre) {
 	}
 
 	//generate random number [0,1]
-    double num = rand()/(double)RAND_MAX;
-    //cout << num << " " << endl;
-    vector<double>::iterator it;
+	double num = rand()/(double)RAND_MAX;
+	//cout << num << " " << endl;
+	vector<double>::iterator it;
 
-    if (num == 0) it = upper_bound(accumProbs.begin(), accumProbs.end(), num);
-    else it = lower_bound(accumProbs.begin(), accumProbs.end(), num);
-    
-    return words[it-accumProbs.begin()];
+	if (num == 0) it = upper_bound(accumProbs.begin(), accumProbs.end(), num);
+	else it = lower_bound(accumProbs.begin(), accumProbs.end(), num);
+
+	return words[it-accumProbs.begin()];
 }
 
 void test_sampleWord() {
@@ -136,8 +136,8 @@ void generateSentence(int length) {
 }
 
 int main(int argc, char **argv) {
-    srand(time(0));
-    rand(); // To prevent the psuedo random generator depend on increasing time.
+	srand(time(0));
+	rand(); // To prevent the psuedo random generator depend on increasing time.
 
 	readUnigram(argv[1]);
 	readBigram(argv[2]);

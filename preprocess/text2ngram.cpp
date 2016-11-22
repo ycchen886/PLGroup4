@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 		for (auto it2 : map) {
 			it2.second /= count;
 			outfileBigram << setw(20) << it.first << " " << setw(20) << it2.first << "    "
-						  << std::setprecision(10) << to_string(it2.second) << endl;
+				<< std::setprecision(10) << to_string(it2.second) << endl;
 		}
 	}
 
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 		for (auto it2 : map) {
 			it2.second /= count;
 			outfileTrigram << setw(20) << it.first << " " << setw(20) << it2.first << "    "
-						  << std::setprecision(10) << to_string(it2.second) << endl;
+				<< std::setprecision(10) << to_string(it2.second) << endl;
 		}
 	}
 
