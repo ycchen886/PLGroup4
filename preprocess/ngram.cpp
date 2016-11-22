@@ -18,8 +18,9 @@ using namespace std;
 
 // TODO: this is just a naive way of n gram.
 // 1) deal with given keyword
+// 2) don't output <s> <e> tag when generating sentences
 
-double lamda1 = 0.0, lamda2 = 1.0, lamda3 = 1 - lamda1 - lamda2;
+double lamda1 = 0.0, lamda2 = 0.5, lamda3 = 1 - lamda1 - lamda2;
 
 unordered_map<string, double> unigram;
 unordered_map<string, unordered_map<string, double>> bigram, trigram;
@@ -71,7 +72,7 @@ void readTrigram(char *filename) {
 	}
 }
 
-string sampleWord(string pre, string prepre) {
+string sampleWord(string prepre, string pre) {
 	//unordered_map<string, double> interpolateProb;
 	int n = unigram.size();
 	vector<string> words(n, "");
@@ -79,18 +80,28 @@ string sampleWord(string pre, string prepre) {
 	vector<double> accumProbs(n, 0);
 
 	int i = 0;
-	double sum = 0, accumSum = 0;
+	double sum = 0, accumSum = 0, unigramSum = 0;
 	for (auto it : unigram) {
 		string word = it.first;
 		words[i] = word;
 		probs[i] = lamda1 * unigram[word] + lamda2 * bigram[pre][word] + lamda3 * trigram[prepre + " " + pre][word];
 		sum += probs[i];
+		unigramSum += unigram[word];
 		i++;
 	}
 
-	for (int i = 0; i < n; i++) {
-		accumSum += probs[i];
-		accumProbs[i] = accumSum / sum;
+	if (sum == 0) { // no probs for the next word
+		i = 0;
+		for (auto it : unigram) {
+			string word = it.first;
+			accumProbs[i] = ((i == 0) ? 0 : accumProbs[i-1]) + unigram[word]/unigramSum;
+			i++;
+		}
+	} else {
+		for (int i = 0; i < n; i++) {
+			accumSum += probs[i];
+			accumProbs[i] = accumSum / sum;
+		}
 	}
 
 	//generate random number [0,1]
@@ -105,15 +116,18 @@ string sampleWord(string pre, string prepre) {
 }
 
 void test_sampleWord() {
-	//cout << sampleWord("been", "have been");
-	generateSentence(10);
+	//cout << sampleWord("", "<s>");
+	//cout << sampleWord(".", "<e>"); // end of sentence
+	//generateSentence(10);
 	cout << endl;
 }
 
 void generateSentence(int length) {
 	string pre = "<s>", prepre = "";
 	for (int i = 0; i < length; i++) {
-		string cur = sampleWord(pre, prepre);
+		string cur = sampleWord(prepre, pre);
+		if (cur == "<e>") cur = sampleWord("", "<s>");
+
 		cout << cur << " ";
 		prepre = pre;
 		pre = cur;
@@ -131,6 +145,7 @@ int main(int argc, char **argv) {
 
 	int sentenceLength = atoi(argv[4]);
 	generateSentence(sentenceLength);
+	//test_sampleWord();
 	
 	return 0;
 }

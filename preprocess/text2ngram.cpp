@@ -7,14 +7,17 @@
 using namespace std;
 
 // How to use: ./text2ngram.o <input file name> <output file name>
+//
 // g++ -std=c++11 text2ngram.cpp -o text2ngram.o
 // ./text2ngram.o sample.txt sample
+//
+// => this will generate three files: sample_uni.out, sample_bi.out, sample_tri.out
 
 // This program parses throught the text file, counts unigram, bigram and trigram.
 // And then wrtie those into the output files.
 
-// Deal with <m> tag:
-// 1) <m> is added between two sentences. So, it could be seen as <s> or <e>.
+// 1) Deal with <m> tag:
+// <m> is added between two sentences. So, it could be seen as <s> or <e> when counting occurance.
 
 
 int main(int argc, char **argv) {

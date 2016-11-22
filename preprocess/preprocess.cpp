@@ -27,6 +27,10 @@ using namespace std;
 
 // 3) Deal with UTF-8: use UTF8-CPP, a small library that could deal with UTF-8.
 
+// 4) Add middle tag <m> between two senteces.
+// e.g. <s> I like to eat apples . <m> But my brother doesn't . <e>
+
+
 struct Word {
 	// ["...I..."] => pre: [" ...], mid: [I], post: [... "], cleanword: [" ... I ... "]
 	string pre;
