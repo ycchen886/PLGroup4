@@ -13,6 +13,9 @@ using namespace std;
 // This program parses throught the text file, counts unigram, bigram and trigram.
 // And then wrtie those into the output files.
 
+// Deal with <m> tag:
+// 1) <m> is added between two sentences. So, it could be seen as <s> or <e>.
+
 
 int main(int argc, char **argv) {
 	
@@ -29,18 +32,40 @@ int main(int argc, char **argv) {
 
 	//cout << ngram << endl;
 
-	string pre = "", prepre = "";
+	//string pre = "", prepre = "", preprepre = "";
 
 	while (getline(infile, line)) {
 		
 		istringstream iss(line);
 		string word;
+		string pre = "", prepre = "", preprepre = ""; //next paragraph is not related with the previous one
 
 		while (iss >> word) {
-			unigram[word]++;
-			if (pre != "") bigram[pre][word]++;
-			if (prepre != "") trigram[prepre][word]++;
-			prepre = (pre == "") ? "" : pre + " " + word;
+			if (word == "<m>") unigram["<e>"]++;
+			else unigram[word]++;
+
+			if (pre != "") {
+				if (word == "<m>") bigram[pre]["<e>"]++;
+				else if (pre == "<m>") {
+					bigram["<s>"][word]++;
+					if (prepre != "") bigram[prepre][word]++;
+				} else bigram[pre][word]++;
+			}
+			
+			if (prepre != "" && pre != "") {
+				if (word == "<m>") trigram[prepre + " " + pre]["<e>"]++;
+				else if (pre == "<m>") {
+					if (preprepre != "") trigram[preprepre + " " + prepre][word]++;
+				} else if (prepre == "<m>") {
+					trigram["<s> " + pre][word]++;
+					if (preprepre != "") trigram[preprepre + " " + pre][word]++;
+				} else {
+					trigram[prepre + " " + pre][word]++;
+				}
+			}
+
+			preprepre = prepre;
+			prepre = pre;
 			pre = word;
 		}
 	}

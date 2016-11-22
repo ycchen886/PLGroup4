@@ -17,8 +17,7 @@ using namespace std;
 // for different dependency on unigram/bigram/trigram models.
 
 // TODO: this is just a naive way of n gram.
-// 1) deal with <m> tag
-// 2) deal with given keyword
+// 1) deal with given keyword
 
 double lamda1 = 0.0, lamda2 = 1.0, lamda3 = 1 - lamda1 - lamda2;
 
