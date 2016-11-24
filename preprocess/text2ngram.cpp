@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 		
 		istringstream iss(line);
 		string word;
-		string pre = "", prepre = "", preprepre = ""; //next paragraph is not related with the previous one
+		string pre = "", prepre = ""; //next paragraph is not related with the previous one
 
 		while (iss >> word) {
 			if (word == "<m>") unigram["<e>"]++;
@@ -51,23 +51,20 @@ int main(int argc, char **argv) {
 				if (word == "<m>") bigram[pre]["<e>"]++;
 				else if (pre == "<m>") {
 					bigram["<s>"][word]++;
-					if (prepre != "") bigram[prepre][word]++;
-				} else bigram[pre][word]++;
+					bigram["<e>"][word]++;
+				}
+				else bigram[pre][word]++;
 			}
 			
 			if (prepre != "" && pre != "") {
 				if (word == "<m>") trigram[prepre + " " + pre]["<e>"]++;
-				else if (pre == "<m>") {
-					if (preprepre != "") trigram[preprepre + " " + prepre][word]++;
-				} else if (prepre == "<m>") {
+				else if (pre == "<m>") trigram[prepre + " <e>"][word]++;
+				else if (prepre == "<m>") {
 					trigram["<s> " + pre][word]++;
-					if (preprepre != "") trigram[preprepre + " " + pre][word]++;
-				} else {
-					trigram[prepre + " " + pre][word]++;
-				}
+					trigram["<e> " + pre][word]++;
+				} else trigram[prepre + " " + pre][word]++;
 			}
 
-			preprepre = prepre;
 			prepre = pre;
 			pre = word;
 		}
