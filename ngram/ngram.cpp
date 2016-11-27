@@ -251,7 +251,7 @@ string generatePartOfSentence(string start, string end) {
 	queue<WordPath> qFromStart, qFromEnd;
 	qFromStart.push(WordPath(start));
 	qFromEnd.push(WordPath(end));
-	int partOfSentenceLen = 8;
+	int partOfSentenceLen = 4;
 
 	while (!qFromStart.empty()) {
 		WordPath wp = qFromStart.front();
@@ -263,10 +263,12 @@ string generatePartOfSentence(string start, string end) {
 		if (bigram[wp.pre].size() == 0) {
 			//cout << "1:" << endl;
 			for (auto it : unigram) {
+				if (it.first == "<s>") continue;
+
 				WordPath tmp = wp;
 				string word = it.first;
 				double prob = unigram[word];
-				if (unigram[word] > 0){ // && word != "<e>") {
+				if (unigram[word] > 0 && word != "<e>") {
 					tmp.add(word, prob);
 					fromStart[word].push_back(tmp);
 					qFromStart.push(tmp);
@@ -278,7 +280,7 @@ string generatePartOfSentence(string start, string end) {
 				WordPath tmp = wp;
 				string word = it.first;
 				double prob = 0.5 * (it.second) + 0.5 * trigram[tmp.prepre + " " + tmp.pre][word];
-				if (prob > 0) { // && word != "<e>") {
+				if (prob > 0 && word != "<e>") {
 					tmp.add(word, prob);
 					fromStart[word].push_back(tmp);
 					qFromStart.push(tmp);
@@ -312,10 +314,12 @@ string generatePartOfSentence(string start, string end) {
 		if (backwardBigram[wp.pre].size() == 0) {
 			//cout << "1:" << endl;
 			for (auto it : unigram) {
+				if (it.first == "<e>") continue;
+
 				WordPath tmp = wp;
 				string word = it.first;
 				double prob = unigram[word];
-				if (unigram[word] > 0 && word != "<e>") {
+				if (unigram[word] > 0 && word != "<e>" && word != "<s>") {
 					tmp.addBackward(word, prob);
 					fromEnd[word].push_back(tmp);
 					qFromEnd.push(tmp);
@@ -327,7 +331,7 @@ string generatePartOfSentence(string start, string end) {
 				WordPath tmp = wp;
 				string word = it.first;
 				double prob = 0.5 * (it.second) + 0.5 * backwardTrigram[tmp.prepre + " " + tmp.pre][word];
-				if (prob > 0 ) { //&& word != "<e>") {
+				if (prob > 0 && word != "<e>" && word != "<s>") {
 					tmp.addBackward(word, prob);
 					fromEnd[word].push_back(tmp);
 					qFromEnd.push(tmp);
@@ -361,7 +365,7 @@ string generatePartOfSentence(string start, string end) {
 	for (auto it : fromStart) {
 		countFromStart += it.second.size();
 		vector<WordPath> vwp = it.second;
-		for (int i = 0; i < it.second.size(); i++) cout << vwp[i].totalPath << endl;
+		//for (int i = 0; i < it.second.size(); i++) cout << vwp[i].totalPath << endl;
 	}
 	cout << "------" << endl;
 	for (auto it : fromEnd) {
