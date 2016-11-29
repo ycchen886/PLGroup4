@@ -4,6 +4,7 @@
 #include <string>
 #include <cctype>
 #include <codecvt>
+#include <set>
 #include "utf8.h"
 
 using namespace std;
@@ -18,18 +19,13 @@ using namespace std;
 // Make ["While] => [" While]
 // Make ["...I..."] => [" ... I ... "]
 
-// 2) (?)Deal with abbreviation: at least first char is capital
+// 2) (?) Deal with abbreviation: at least first char is capital
 // Don't separate [Mr.] into [Mr] and [.]
 // Missclassify [Yes.] as abbreviation.
-
-// Go around: the end of the sentence shuold be <lowercase word> <.> <uppercase word>
-// Wrong: [I told Mr. Brown today's news.], [This country is call Perth. It has ....], [... so R. L. Stevenson has it.]
+// New solution: Check against common abbreviations. 
+// Problem: This will fail for some abbreviations we haven't hardcoded.
 
 // 3) Deal with UTF-8: use UTF8-CPP, a small library that could deal with UTF-8.
-
-// 4) Add middle tag <m> between two senteces.
-// e.g. <s> I like to eat apples . <m> But my brother doesn't . <e>
-
 
 struct Word {
 	// ["...I..."] => pre: [" ...], mid: [I], post: [... "], cleanword: [" ... I ... "]
@@ -44,14 +40,16 @@ struct Word {
 
 string UnicodeToUTF8(unsigned int);
 bool isEndOfSentence(string);
+bool isAbbreviation(string);
 
 // Add <m> tag if w1 is the end of the sentence.
 string addMidTag(Word w1, Word w2) {
-	if (islower(w1.mid[0]) && isEndOfSentence(w1.post) && isupper(w2.mid[0])) {
+	if (!isAbbreviation(w1.mid) && isEndOfSentence(w1.post) && isupper(w2.mid[0])) {
 		return w1.cleanword + " <m>";
 	}
 	else return w1.cleanword;
 }
+
 
 // Make word into a clean vesion by separating prior and post punctuations. Should deal with UTF-8.
 Word clean_UTF8(string word) {
@@ -105,6 +103,38 @@ bool isEndOfSentence(string words) {
 		if (word == "." || word == "!" || word == "?") return true;
 	}
 	return false;
+}
+
+// Common abbreviations 
+const string tmp[] = {
+	"Dr",
+	"Mr",
+	"Mrs",
+	"Ms",
+	"rd",
+	"st",
+	"etc",
+	"Gen",
+	"Hon",
+	"Prof",
+	"Rev",
+	"Sr",
+	"Jr",
+	"St",
+	"ave",
+	"Dept",
+	"Inc",
+	"Mt",
+	"No",
+};
+const set<string> ABBREVIATIONS(tmp, tmp + sizeof(tmp) / sizeof(tmp[0]));
+
+// Checks if a word is in the list of common abbreviations
+bool isAbbreviation(string word) {
+	//transform(word.begin(), word.end(), word.begin(), ::tolower);
+	if (isupper(word[0]) && word.size() == 1) return true;
+
+	return ABBREVIATIONS.find(word) != ABBREVIATIONS.end();
 }
 
 // Convert unicode to UTF8 string
