@@ -11,16 +11,16 @@
 
 using namespace std;
 
-// How to use: ./ngram.o <unigram file> <bigram file> <trigram file> <sentence length>
-// g++ -std=c++11 ngram.cpp -o ngram.o
-// ./ngram.o sample_uni.out sample_bi.out sample_tri.out 10
+// How to use: ./ngram <unigram_file> <bigram_file> <backward_bigram_file> <trigram_file> <backward_trigram_file>
+// g++ -std=c++11 ngram.cpp -o ngram
+// ./ngram sample_uni.out sample_bi.out sample_bbi.out sample_tri.out sample_btri.out
 
 // parameters:
 // 1) lamda1, lamda2 and lamda3: for different dependency on unigram/bigram/trigram models.
 // 2) 
 
 // TODO: this is just a naive way of n gram.
-// 1) deal with given keyword
+// 1) deal with 2 keyword (maybe more in the future)
 // 2) don't output <s> <e> tag when generating sentences
 
 //double lamda1 = 0.0, lamda2 = 0.5, lamda3 = 1 - lamda1 - lamda2;

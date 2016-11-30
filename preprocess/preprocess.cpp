@@ -28,9 +28,12 @@ using namespace std;
 // 3) Deal with UTF-8: use UTF8-CPP, a small library that could deal with UTF-8.
 
 // TODO:
-// 1) remove unnecessary parts of text: 
+// *1) remove unnecessary parts of text: 
 // e.g. in 53537-0.txt, remove line 1 - 116(begin), line 5735 - 6254 (end)
 // e.g. remove [Illustration: PERTH FROM THE SLOPES OF KINNOULL HILL], and combine the paragraph
+// e.g. subtitles
+
+// *2) append indented paragraph to its previous paragraph
 
 struct Word {
 	// ["...I..."] => pre: [" ...], mid: [I], post: [... "], cleanword: [" ... I ... "]
