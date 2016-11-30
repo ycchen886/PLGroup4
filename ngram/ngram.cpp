@@ -31,8 +31,11 @@ int shortSentenceLenUpperBnd = 8, longSentenceLenLowerBnd = 25, maxSentencelen =
 unordered_map<string, double> unigram;
 unordered_map<string, unordered_map<string, double>> bigram, trigram, backwardBigram, backwardTrigram;
 
-void generateSentence(int);
+/**
+ * Define Class
+ */
 
+// Record the path from word1 to word2, and the probability of the path
 struct WordPath{
 	string totalPath;
 	int len;
@@ -59,22 +62,33 @@ struct WordPath{
 	}
 };
 
-struct Sentence {
-	string sentence;
-	double prob;
-
-	int getLenOfLastWord() {
-		return 0;
-	}
-
-
+// Record possible paths (not all) from word1 to word2, and their accumulative probabilities
+struct SubSentence {
+	vector<double> accumProbs;
+	vector<string> sentences;
+	SubSentence(vector<double> _accumProbs, vector<string> _sentences): accumProbs(_accumProbs), sentences(_sentences) {}
 };
+
+/**
+ * Declare functions
+ */
+
+void generateSentence(int);
+string sampleWord(string prepre, string pre, int direction, double lamda1, double lamda2, double lamda3);
+
+SubSentence generatePartOfSentence(string, string);
+string mergeString(string, string);
+
 
 void clear(std::queue<WordPath> &q)
 {
 	std::queue<WordPath> empty;
 	std::swap( q, empty );
 }
+
+/**
+ * Read unigram, bigram, backwardBigram, trigram, backwardTrigram files
+ */
 
 void readUnigram(char *filename) {
 	ifstream infile(filename);
@@ -101,8 +115,23 @@ void readBigram(char *filename) {
 		double prob;
 
 		while (iss >> word1 >> word2 >> prob) {
+			//if (word2 == "<e>" && isalnum(word1[0])) continue;
 			bigram[word1][word2] = prob;
-			backwardBigram[word2][word1] = prob;
+		}
+	}
+}
+
+void readBackwardBigram(char *filename) {
+	ifstream infile(filename);
+	string line;
+
+	while (getline(infile, line)) {	
+		istringstream iss(line);
+		string word1, word2;
+		double prob;
+
+		while (iss >> word1 >> word2 >> prob) {
+			backwardBigram[word1][word2] = prob;
 		}
 	}
 }
@@ -117,16 +146,49 @@ void readTrigram(char *filename) {
 		double prob;
 
 		while (iss >> word1 >> word2 >> word3 >> prob) {
+			//if (word3 == "<e>" && isalnum(word2[0])) continue;
 			trigram[word1 + " " + word2][word3] = prob;
-			backwardTrigram[word3 + " " + word2][word1] = prob;
 		}
 	}
 }
 
-// prepre: the string that is two words before
-// pre: the string that is one word before
-// direction: +1 means forward, -1 means backward
+void readBackwardTrigram(char *filename) {
+	ifstream infile(filename);
+	string line;
+
+	while (getline(infile, line)) {	
+		istringstream iss(line);
+		string word1, word2, word3;
+		double prob;
+
+		while (iss >> word1 >> word2 >> word3 >> prob) {
+			backwardTrigram[word1 + " " + word2][word3] = prob;
+		}
+	}
+}
+
+/**
+ * Trivial example for generating words.
+ */
+
+void generateSentence(int length) {
+	string pre = "<s>", prepre = "";
+	for (int i = 0; i < length; i++) {
+		string cur = sampleWord(prepre, pre, 1, 0.0, 0.5, 0.5);
+		if (cur == "<e>") cur = sampleWord("", "<s>", 1, 0.0, 0.5, 0.5);
+
+		cout << cur << " ";
+		prepre = pre;
+		pre = cur;
+	}
+	cout << endl;
+}
+
 string sampleWord(string prepre, string pre, int direction, double lamda1, double lamda2, double lamda3) {
+	// prepre: the string that is two words before
+	// pre: the string that is one word before
+	// direction: +1 means forward, -1 means backward
+	
 	//unordered_map<string, double> interpolateProb;
 	int n = unigram.size();
 	vector<string> words(n, "");
@@ -177,22 +239,14 @@ void test_sampleWord() {
 	cout << endl;
 }
 
-void generateSentence(int length) {
-	string pre = "<s>", prepre = "";
-	for (int i = 0; i < length; i++) {
-		string cur = sampleWord(prepre, pre, 1, 0.0, 0.5, 0.5);
-		if (cur == "<e>") cur = sampleWord("", "<s>", 1, 0.0, 0.5, 0.5);
+/**
+ * For WORD/WORDS
+ *
+ * This function will generate random words.
+ * GENERATE (10 SHORT WORDS) THEN OUTPUT => generateWords(10, 1, shortWordLenUpperBnd, {""})
+ * GENERATE (5 WORDS) ON "cat" THEN OUTPUT => generateWords(5, 1, INT_MAX, {"cat"})
+ */
 
-		cout << cur << " ";
-		prepre = pre;
-		pre = cur;
-	}
-	cout << endl;
-}
-
-// This function will generate random words.
-// GENERATE (10 SHORT WORDS) THEN OUTPUT => generateWords(10, 1, shortWordLenUpperBnd, {""})
-// GENERATE (5 WORDS) ON "cat" THEN OUTPUT => generateWords(5, 1, INT_MAX, {"cat"})
 void generateWords(int number, int lenLowerBnd, int lenUpperBnd, vector<string> keywords) {
 	if (keywords.size() > 1) cout << "You should not have more than one keyword for generating words.";
 
@@ -215,15 +269,32 @@ void generateWords(int number, int lenLowerBnd, int lenUpperBnd, vector<string> 
 	cout << endl;
 }
 
-// GENERATE (10 SHORT SENTENCES) THEN OUTPUT
+/**
+ * For SENTENCE/SENTENCES
+ *
+ * This function will generate random sentences.
+ * GENERATE (10 SHORT SENTENCES) THEN OUTPUT => generateSentences(10, 1, shortSentenceLenUpperBnd, {""})
+ */
+
 void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<string> keywords) {
 	if (keywords.size() > 2) {
 		cout << "You should not have more than two keyword." << endl;
 		return;
 	}
 
-	if (keywords.size() == 1) {
+	if (keywords.size() == 2) {
+		//TODO
+	}
 
+	if (keywords.size() == 1) {
+		SubSentence subsent1 = generatePartOfSentence("<s>", keywords[0]);
+		SubSentence subsent2 = generatePartOfSentence(keywords[0], "<e>");
+		for (int i = 0; i < number; i++) {
+			int num1 = rand() / subsent1.sentences.size();
+			int num2 = rand() / subsent2.sentences.size();
+			cout << mergeString(subsent1.sentences[num1], subsent2.sentences[num2]) << endl;
+		}
+		return;
 	}
 
 	for (int i = 0; i < number; i++) {
@@ -246,120 +317,175 @@ void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<stri
 	}
 }
 
-string generatePartOfSentence(string start, string end) {
+string mergeString(string s1, string s2) {
+	size_t pos1 = s1.find_last_of(" ");
+	size_t pos2 = s2.find_first_of(" ");
+	if (pos1 != string::npos) return s1.substr(0, pos1) + " " + s2;
+	else return s1 + " " + s2.substr(pos2+1);
+}
+
+string mergeWordPath(WordPath wp1, WordPath wp2) {
+	return mergeString(wp1.totalPath, wp2.totalPath);
+}
+
+/*
+string mergeWordPath(WordPath wp1, WordPath wp2) {
+	size_t pos1 = wp1.totalPath.find_last_of(" ");
+	size_t pos2 = wp2.totalPath.find_first_of(" ");
+	if (pos1 != string::npos) return wp1.totalPath + "---" + wp2.totalPath; //wp1.totalPath.substr(0, pos1) + " " + wp2.totalPath;//
+	else return wp1.totalPath + "---" + wp2.totalPath; //wp1.totalPath + " " + wp2.totalPath.substr(pos2+1);//
+}
+*/
+
+void findPath(unordered_map<string, double> &results, unordered_map<string, vector<WordPath>> &hash, WordPath wp,
+			  double &sum, int &count, bool hashIsStart) {
+	string word = wp.pre;
+	if (hash.count(word) != 0) {
+		vector<WordPath> vwp = hash[word];
+		for (int i = 0; i < vwp.size(); i++) {
+				string sentence;
+				if (hashIsStart) {
+					sentence = mergeWordPath(vwp[i], wp);
+				} else { 
+					sentence = mergeWordPath(wp, vwp[i]);
+				}
+
+				double prob = vwp[i].pathProb * wp.pathProb;
+				//results.push_back(sentence);
+				//probs.push_back(prob);
+				if (results.count(sentence) != 0) {
+					sum = sum - results[sentence];
+					results[sentence] = max(results[sentence], prob);
+					sum += results[sentence];
+				} else {
+					sum += prob;
+					results[sentence] = prob;
+					count++;
+				}
+			}
+	}
+}
+
+SubSentence generatePartOfSentence(string start, string end) {
 	unordered_map<string, vector<WordPath>> fromStart, fromEnd;
 	queue<WordPath> qFromStart, qFromEnd;
+	fromStart[start] = {WordPath(start)};
+	fromEnd[end] = {WordPath(end)};
 	qFromStart.push(WordPath(start));
 	qFromEnd.push(WordPath(end));
-	int partOfSentenceLen = 4;
+	int partOfSentenceLen = 20;
+	int numSentences = 100000;
 
-	while (!qFromStart.empty()) {
-		WordPath wp = qFromStart.front();
-		qFromStart.pop();
-
-		if (wp.len > partOfSentenceLen) break;
-		if (wp.pre == "<e>") continue;
-
-		if (bigram[wp.pre].size() == 0) {
-			//cout << "1:" << endl;
-			for (auto it : unigram) {
-				if (it.first == "<s>") continue;
-
-				WordPath tmp = wp;
-				string word = it.first;
-				double prob = unigram[word];
-				if (unigram[word] > 0 && word != "<e>") {
-					tmp.add(word, prob);
-					fromStart[word].push_back(tmp);
-					qFromStart.push(tmp);
-				}
-			}
-		} else {
-			//cout << "2:" << endl;
-			for (auto it : bigram[wp.pre]) {
-				WordPath tmp = wp;
-				string word = it.first;
-				double prob = 0.5 * (it.second) + 0.5 * trigram[tmp.prepre + " " + tmp.pre][word];
-				if (prob > 0 && word != "<e>") {
-					tmp.add(word, prob);
-					fromStart[word].push_back(tmp);
-					qFromStart.push(tmp);
-				}
-			}
-		}
-		/*
-		for (auto it : unigram) {
-			WordPath tmp = wp;
-			string word = it.first;
-			double prob = 0.0 * unigram[word] + 0.5 * bigram[tmp.pre][word] + 0.5 * trigram[tmp.prepre + " " + tmp.pre][word];
-			if (prob > 0 && word != "<e>") {
-				tmp.add(word, prob);
-				fromStart[word].push_back(tmp);
-				qFromStart.push(tmp);
-			}
-		}
-		*/
-	}
-	cout << "start cleaning queue;" << endl;
-	clear(qFromStart);
-	cout << "finish qFromStart." << endl;
-
-	while (!qFromEnd.empty()) {
-		WordPath wp = qFromEnd.front();
-		qFromEnd.pop();
-
-		if (wp.len > partOfSentenceLen) break;
-		if (wp.pre == "<s>" || wp.pre == "<e>") continue;
-
-		if (backwardBigram[wp.pre].size() == 0) {
-			//cout << "1:" << endl;
-			for (auto it : unigram) {
-				if (it.first == "<e>") continue;
-
-				WordPath tmp = wp;
-				string word = it.first;
-				double prob = unigram[word];
-				if (unigram[word] > 0 && word != "<e>" && word != "<s>") {
-					tmp.addBackward(word, prob);
-					fromEnd[word].push_back(tmp);
-					qFromEnd.push(tmp);
-				}
-			}
-		} else {
-			//cout << "2:" << endl;
-			for (auto it : backwardBigram[wp.pre]) {
-				WordPath tmp = wp;
-				string word = it.first;
-				double prob = 0.5 * (it.second) + 0.5 * backwardTrigram[tmp.prepre + " " + tmp.pre][word];
-				if (prob > 0 && word != "<e>" && word != "<s>") {
-					tmp.addBackward(word, prob);
-					fromEnd[word].push_back(tmp);
-					qFromEnd.push(tmp);
-				}
-			}
-		}
-		/*
-		for (auto it : unigram) {
-			WordPath tmp = wp;
-			string word = it.first;
-			double prob = 0.0 * unigram[word] + 0.5 * backwardBigram[tmp.pre][word] + 0.5 * backwardTrigram[tmp.prepre + " " + tmp.pre][word];
-			if (prob > 0 && word != "<e>") {
-				//cout << prob << " ";
-				tmp.addBackward(word, prob);
-				fromEnd[word].push_back(tmp);
-				qFromEnd.push(tmp);
-			}
-		}
-		*/
-	}
-	cout << "start cleaning queue;" << endl;
-	clear(qFromEnd);
-	cout << "finish qFromEnd." << endl;
-
-	vector<string> results;
-	vector<double> probs;
+	int turn = 0;
+	//vector<string> results;
+	//vector<double> probs;
+	unordered_map<string, double> results;
 	double sum = 0.0;
 	int count = 0;
+
+	while (count < numSentences && (!qFromStart.empty() || !qFromEnd.empty())) {
+		//cout << "count = " << count << endl;
+		switch (turn) {
+			case 0 :
+				//cout << "case 0" << endl;
+				if (!qFromStart.empty()) {
+					WordPath wp = qFromStart.front();
+					qFromStart.pop();
+
+					if (wp.len > partOfSentenceLen) break;
+					if (wp.pre == "<e>") continue;
+
+					if (bigram[wp.pre].size() == 0) {
+						//cout << "1:" << endl;
+						for (auto it : unigram) {
+							if (it.first == "<s>") continue;
+
+							WordPath tmp = wp;
+							string word = it.first;
+							double prob = unigram[word];
+							
+							if (unigram[word] > 0 && word != "<e>") {
+								tmp.add(word, prob);
+								fromStart[word].push_back(tmp);
+								qFromStart.push(tmp);
+								findPath(results, fromEnd, tmp, sum, count, 0);
+							}
+						}
+					} else {
+						//cout << "2:" << endl;
+						for (auto it : bigram[wp.pre]) {
+							WordPath tmp = wp;
+							string word = it.first;
+							double prob = 0.5 * (it.second) + 0.5 * trigram[tmp.prepre + " " + tmp.pre][word];
+							if (prob > 0 && word != "<e>") {
+								tmp.add(word, prob);
+								fromStart[word].push_back(tmp);
+								qFromStart.push(tmp);
+								findPath(results, fromEnd, tmp, sum, count, 0);
+							}
+						}
+					}
+				}
+				break;
+
+			case 1:
+				//cout << "case 1" << endl;
+				if (!qFromEnd.empty()) {
+					WordPath wp = qFromEnd.front();
+					qFromEnd.pop();
+
+					if (wp.len > partOfSentenceLen) break;
+					if (wp.pre == "<s>") continue;
+
+					if (backwardBigram[wp.pre].size() == 0) {
+						//cout << "1:" << endl;
+						for (auto it : unigram) {
+							if (it.first == "<e>") continue;
+
+							WordPath tmp = wp;
+							string word = it.first;
+							double prob = unigram[word];
+
+							if (unigram[word] > 0 && word != "<e>" && word != "<s>") {
+								tmp.addBackward(word, prob);
+								fromEnd[word].push_back(tmp);
+								qFromEnd.push(tmp);
+								findPath(results, fromStart, tmp, sum, count, 1);
+							}
+						}
+					} else {
+						//cout << "2:" << endl;
+						for (auto it : backwardBigram[wp.pre]) {
+							WordPath tmp = wp;
+							string word = it.first;
+							double prob = 0.5 * (it.second) + 0.5 * backwardTrigram[tmp.prepre + " " + tmp.pre][word];
+							if (prob > 0 && word != "<e>" && word != "<s>") {
+								tmp.addBackward(word, prob);
+								fromEnd[word].push_back(tmp);
+								qFromEnd.push(tmp);
+								findPath(results, fromStart, tmp, sum, count, 1);
+							}
+						}
+					}
+				}
+				break;
+			
+			default:
+				break;
+		}
+		turn = !turn;
+	}
+
+	//cout << "start cleaning queue;" << endl;
+	//clear(qFromStart);
+	//cout << "finish qFromStart." << endl;
+
+	
+	//cout << "start cleaning queue;" << endl;
+	//clear(qFromEnd);
+	//cout << "finish qFromEnd." << endl;
+
+	
 
 	int countFromStart = 0, countFromEnd = 0;
 	for (auto it : fromStart) {
@@ -367,43 +493,26 @@ string generatePartOfSentence(string start, string end) {
 		vector<WordPath> vwp = it.second;
 		//for (int i = 0; i < it.second.size(); i++) cout << vwp[i].totalPath << endl;
 	}
-	cout << "------" << endl;
+	//cout << "------" << endl;
 	for (auto it : fromEnd) {
 		countFromEnd += it.second.size();
 		vector<WordPath> vwp = it.second;
-		for (int i = 0; i < it.second.size(); i++) cout << vwp[i].totalPath << endl;
+		//for (int i = 0; i < it.second.size(); i++) cout << vwp[i].totalPath << endl;
 	}
-	cout << "fromStart.size()= " << fromStart.size() << ", fromEnd.size()= " << fromEnd.size() << endl;
-	cout << "countFromStart= " << countFromStart << ", countFromEnd= " << countFromEnd << endl;
+	//cout << "fromStart.size()= " << fromStart.size() << ", fromEnd.size()= " << fromEnd.size() << endl;
+	//cout << "countFromStart= " << countFromStart << ", countFromEnd= " << countFromEnd << endl;
 	//return "";
 
-	
-	for (auto it: fromStart) {
-		string word = it.first;
-		for (int i = 0; i < fromStart[word].size(); i++) {
-			if (fromEnd.count(word) == 0) continue;
-			if (fromStart[word][i].pathProb < sum/countFromStart) continue;
-
-			//cout << fromEnd[word].size() << endl;
-			for (int j = 0; j < fromEnd[word].size(); j++) {
-				if (fromEnd[word][j].pathProb < sum/countFromEnd) continue;
-
-				string sentence = fromStart[word][i].totalPath + "---" + fromEnd[word][j].totalPath;
-				double prob = fromStart[word][i].pathProb * fromEnd[word][j].pathProb;
-				if (prob < sum/countFromStart) continue;
-				results.push_back(sentence);
-				probs.push_back(prob);
-				//cout << fromStart[word][i].totalPath + "---" + fromEnd[word][j].totalPath << endl;
-				sum += fromStart[word][i].pathProb * fromEnd[word][j].pathProb;//probs[probs.size()-1];
-				count++;
-			}
-		}
+	int i = 0;
+	vector<double> accumProbs(results.size(),0);
+	vector<string> sentences(results.size(), "");
+	for (auto it : results) {
+		accumProbs[i] = (i==0 ? 0.0 : accumProbs[i-1]) + it.second/sum;
+		sentences[i] = it.first;
+		//cout << sentences[i] << ": " << accumProbs[i] << endl;
+		i++;
 	}
-	cout << sum << endl;
-	cout << count << endl;
-	
-	vector<double> accumProbs(probs.size(),0);
-	for (int i = 0; i < probs.size(); i++) accumProbs[i] = (i==0 ? 0.0 : accumProbs[i-1]) + probs[i]/sum;
+	//for (int i = 0; i < probs.size(); i++) accumProbs[i] = (i==0 ? 0.0 : accumProbs[i-1]) + probs[i]/sum;
 	//for (int i = 0; i < 100; i++) cout << accumProbs[i] << endl;
 
 	double num = rand()/(double)RAND_MAX;
@@ -413,27 +522,11 @@ string generatePartOfSentence(string start, string end) {
 	if (num == 0) it = upper_bound(accumProbs.begin(), accumProbs.end(), num);
 	else it = lower_bound(accumProbs.begin(), accumProbs.end(), num);
 
-	return results[it-accumProbs.begin()];
-	
-	/*for (auto it : fromStart) {
-		string word = it.first;
-		cout << word << " : ";
-		for (int i = 0; i < fromStart[word].size(); i++) cout << fromStart[word][i].len << " ";
-		cout << endl;
-		//for (int i = 0; i < fromStart[word].size(); i++) cout << fromStart[word][i].totalPath << " ----> prob: " << fromStart[word][i].pathProb << endl;
-	}*/
-	
-	//end = "freezing-point";
-	//for (int i = 0; i < fromStart[end].size(); i++) cout << fromStart[end][i].totalPath << " ----> prob: " << fromStart[end][i].pathProb << endl;
-	//for (int i = 0; i < fromEnd[start].size(); i++) cout << fromEnd[start][i].totalPath << " ----> prob: " << fromEnd[start][i].pathProb << endl;
+	cout << sentences[it-accumProbs.begin()] << endl;
+	//int randPos = rand() % sentences.size();
+	//cout << sentences[randPos] << endl;
 
-	//if (fromStart[end].size() > 0) return fromStart[end][0].totalPath;
-	//else return "There's no path from " + start + " to " + end + ".";
-
-	//if (fromEnd[start].size() > 0) return fromEnd[start][0].totalPath;
-	//else return "There's no backward path from " + end + " to " + start + ".";
-
-	
+	return SubSentence(accumProbs, sentences);
 }
 
 void test_generateWords() {
@@ -451,29 +544,45 @@ void test_generateWords() {
 
 void test_generateSentences() {
 	vector<string> keywords;
-	generateSentences(2, 1, INT_MAX, keywords);
-	cout << endl;
-	generateSentences(1, 1, shortSentenceLenUpperBnd, keywords);
+	//generateSentences(2, 1, INT_MAX, keywords);
+	//cout << endl;
+	//generateSentences(1, 1, shortSentenceLenUpperBnd, keywords);
+	keywords = {"a"};
+	generateSentences(10, 1, shortSentenceLenUpperBnd, keywords);
 }
 
 void test_generatePartOfSentence() {
-	cout << generatePartOfSentence("cat", "made") << endl;
+	/* Test: mergeWordPath
+	WordPath wp1("cat"), wp2("dog");
+	wp1.add("likes", 0.3); wp2.addBackward("likes",0.2);
+	cout << mergeWordPath(wp1,wp2) << endl;
+	*/
+	generatePartOfSentence("<s>", "dubious");
+	generatePartOfSentence("dubious", "made");
+	generatePartOfSentence("made", "<e>");
+
+	generatePartOfSentence("<s>", "<e>");	
+	//cout << generatePartOfSentence("<s>", "made") << endl;
 }
 
 int main(int argc, char **argv) {
 	srand(time(0));
 	rand(); // To prevent the psuedo random generator depend on increasing time.
 
+	if (argc != 6) cout << "Usage: ./ngram <unigram_file> <bigram_file> <backward_bigram_file> <trigram_file> <backward_trigram_file>" << endl;
+
 	readUnigram(argv[1]);
 	readBigram(argv[2]);
-	readTrigram(argv[3]);
+	readBackwardBigram(argv[3]);
+	readTrigram(argv[4]);
+	readBackwardTrigram(argv[5]);
 
-	int sentenceLength = atoi(argv[4]);
+	//int sentenceLength = atoi(argv[6]);
 	//generateWord(sentenceLength);
 	//test_sampleWord();
 	//test_generateWords();
-	//test_generateSentences();
-	test_generatePartOfSentence();
+	test_generateSentences();
+	//test_generatePartOfSentence();
 	
 	return 0;
 }
