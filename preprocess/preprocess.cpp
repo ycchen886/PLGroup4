@@ -27,6 +27,11 @@ using namespace std;
 
 // 3) Deal with UTF-8: use UTF8-CPP, a small library that could deal with UTF-8.
 
+// TODO:
+// 1) remove unnecessary parts of text: 
+// e.g. in 53537-0.txt, remove line 1 - 116(begin), line 5735 - 6254 (end)
+// e.g. remove [Illustration: PERTH FROM THE SLOPES OF KINNOULL HILL], and combine the paragraph
+
 struct Word {
 	// ["...I..."] => pre: [" ...], mid: [I], post: [... "], cleanword: [" ... I ... "]
 	string pre;
@@ -36,6 +41,12 @@ struct Word {
 	Word(): pre(""), mid(""), post(""), cleanword("") {};
 	Word(string _pre, string _mid, string _post, string _cleanword): 
 		pre(_pre), mid(_mid), post(_post), cleanword(_cleanword) {};
+
+	void updateCleanWord() {
+		cleanword = pre + " " + mid + " " + post;
+		if (cleanword[0] == ' ') cleanword = cleanword.substr(1);
+		if (cleanword[cleanword.size()-1] == ' ') cleanword = cleanword.substr(0, cleanword.size()-1);
+	}
 };
 
 string UnicodeToUTF8(unsigned int);
@@ -47,7 +58,14 @@ string addMidTag(Word w1, Word w2) {
 	if (!isAbbreviation(w1.mid) && isEndOfSentence(w1.post) && isupper(w2.mid[0])) {
 		return w1.cleanword + " <m>";
 	}
-	else return w1.cleanword;
+
+	if (isAbbreviation(w1.mid) && w1.post.size() > 0 && w1.post[0] == '.') {
+		w1.mid += ".";
+		if (w1.post.size() > 1 && w1.post[1] == ' ') w1.post = w1.post.substr(2);
+		else w1.post = w1.post.substr(1);
+		w1.updateCleanWord();
+	}
+	return w1.cleanword;
 }
 
 
@@ -178,6 +196,11 @@ void test() {
 
 int main(int argc, char **argv) {
 	
+	if (argc != 3) {
+		cerr << "Usage: ./preprocess <input_file> <output_file>" << endl;
+		return 0;
+	}
+
 	ifstream infile(argv[1]);
 	ofstream outfile(argv[2], ofstream::out);
 
