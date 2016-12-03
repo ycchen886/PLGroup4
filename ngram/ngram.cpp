@@ -78,9 +78,15 @@ struct WordPath{
 struct SubSentence {
 	vector<double> accumProbs;
 	vector<string> sentences;
+	SubSentence() {};
 	SubSentence(vector<double> _accumProbs, vector<string> _sentences): accumProbs(_accumProbs), sentences(_sentences) {}
 
+	bool empty() {
+		return (sentences.size() == 0);
+	}
+
 	string getRandSubSentence(bool byProb) {
+		if (sentences.size() == 0) return "";
 		if (byProb) {
 			// Generate a sentence by probabilities
 			double num = rand()/(double)RAND_MAX;
@@ -329,6 +335,11 @@ void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<stri
 					subsent2 = generatePartOfSentence(keywords[0], keywords[1]),
 					subsent3 = generatePartOfSentence(keywords[1], "<e>");
 
+		if (subsent1.empty() || subsent2.empty() || subsent3.empty()) {
+			cout << "Cannot generate sentences with " << keywords[0] << " and " << keywords[1] << "." << endl;
+			return;
+		}
+
 		for (int i = 0; i < number; i++) {
 			string str = mergeString(subsent1.getRandSubSentence(byProb), subsent2.getRandSubSentence(byProb));
 			cout << mergeString(str, subsent3.getRandSubSentence(byProb)) << endl;
@@ -340,6 +351,12 @@ void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<stri
 	if (keywords.size() == 1) {
 		SubSentence subsent1 = generatePartOfSentence("<s>", keywords[0]);
 		SubSentence subsent2 = generatePartOfSentence(keywords[0], "<e>");
+		
+		if (subsent1.empty() || subsent2.empty()) {
+			cout << "Cannot generate sentences with " << keywords[0] << "." << endl;
+			return;
+		}
+
 		for (int i = 0; i < number; i++) {
 			cout << mergeString(subsent1.getRandSubSentence(byProb), subsent2.getRandSubSentence(byProb)) << endl;
 		}
@@ -424,6 +441,7 @@ SubSentence generatePartOfSentence(string start, string end) {
 	qFromEnd.push(WordPath(end));
 	int partOfSentenceLen = 20;
 	int numSentences = 100000;
+	int iter = 0, maxIter = 100000;
 
 	int turn = 0;
 	//vector<string> results;
@@ -432,7 +450,7 @@ SubSentence generatePartOfSentence(string start, string end) {
 	double sum = 0.0;
 	int count = 0;
 
-	while (count < numSentences && (!qFromStart.empty() || !qFromEnd.empty())) {
+	while (count < numSentences && (!qFromStart.empty() || !qFromEnd.empty()) && iter < maxIter) {
 		//cout << "count = " << count << endl;
 		if (turn == 0) {
 			//cout << "case 0" << endl;
@@ -516,8 +534,10 @@ SubSentence generatePartOfSentence(string start, string end) {
 			}
 		}
 		turn = !turn;
+		iter++;
 	}
 
+	if (results.size() == 0) return SubSentence();
 	//cout << "start cleaning queue;" << endl;
 	//clear(qFromStart);
 	//cout << "finish qFromStart." << endl;
@@ -590,6 +610,9 @@ void test_generateSentences() {
 	//cout << endl;
 	//generateSentences(1, 1, shortSentenceLenUpperBnd, keywords, 0);
 	keywords = {"you", "king"};
+	generateSentences(10, 1, shortSentenceLenUpperBnd, keywords, 1);
+
+	keywords = {"<s>", "<s>"};
 	generateSentences(10, 1, shortSentenceLenUpperBnd, keywords, 1);
 }
 
@@ -704,9 +727,9 @@ int main(int argc, char **argv) {
 	//generateWord(sentenceLength);
 	//test_sampleWord();
 	//test_generateWords();
-	//test_generateSentences();
+	test_generateSentences();
 	//test_generatePartOfSentence();
-	test_generateParagraphs();
+	//test_generateParagraphs();
 
 	return 0;
 }
