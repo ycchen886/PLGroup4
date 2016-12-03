@@ -5,7 +5,6 @@
 #include <cctype>
 #include <codecvt>
 #include <set>
-#include <locale>
 #include "utf8.h"
 
 using namespace std;
@@ -277,6 +276,6 @@ int main(int argc, char **argv) {
 
 	cout << "#paragraph: " << countParagraph << endl;
 
-	test();
+	//test();
 	return 0;
 }

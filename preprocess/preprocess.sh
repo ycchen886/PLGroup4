@@ -8,9 +8,10 @@ fi
 infile="$1"
 tmpfile1=$infile".tmp.1"
 tmpfile2=$infile".tmp.2"
+tmpfile3=$infile".tmp.3"
 outfile="$2"
 
-# Need to remove n lines at the beginning and at the end of the file (non-content part)
+# TODO: Need to remove n lines at the beginning and at the end of the file (non-content part)
 
 # remove the line: [Illustration ......]
 perl -0777 -p -e 's|\n\n\[Illustration.*\]\n\n| |g' $infile > $tmpfile1
@@ -19,8 +20,10 @@ perl -0777 -p -e 's|\n\n\[Illustration.*\]\n\n| |g' $infile > $tmpfile1
 perl -0777 -p -e 's|(\n\n) +| |g' $tmpfile1 > $tmpfile2
 
 # add <s>, <m>, <e> tag
-./preprocess $tmpfile2 $outfile
+./preprocess $tmpfile2 $tmpfile3
 
-rm $tmpfile1 $tmpfile2
+perl -0777 -p -e 's| _||g' $tmpfile3 > $outfile
+
+rm $tmpfile1 $tmpfile2 $tmpfile3
 
 

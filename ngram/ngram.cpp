@@ -6,6 +6,8 @@
 #include <queue>
 #include <cstdlib>
 #include <climits>
+#include <cmath>
+#include <random>
 #include <algorithm>
 #include <unordered_map>
 
@@ -30,6 +32,16 @@ int shortSentenceLenUpperBnd = 8, longSentenceLenLowerBnd = 25, maxSentencelen =
 
 unordered_map<string, double> unigram;
 unordered_map<string, unordered_map<string, double>> bigram, trigram, backwardBigram, backwardTrigram;
+
+// util
+template <typename T>
+string to_string_with_precision(const T a_value, const int n = 6)
+{
+    std::ostringstream out;
+    out << std::setprecision(n) << a_value;
+    return out.str();
+}
+
 
 /**
  * Define Class
@@ -67,6 +79,33 @@ struct SubSentence {
 	vector<double> accumProbs;
 	vector<string> sentences;
 	SubSentence(vector<double> _accumProbs, vector<string> _sentences): accumProbs(_accumProbs), sentences(_sentences) {}
+
+	string getRandSubSentence(bool byProb) {
+		if (byProb) {
+			// Generate a sentence by probabilities
+			double num = rand()/(double)RAND_MAX;
+			vector<double>::iterator it;
+
+			if (num == 0) it = upper_bound(accumProbs.begin(), accumProbs.end(), num);
+			else it = lower_bound(accumProbs.begin(), accumProbs.end(), num);
+
+			return sentences[it-accumProbs.begin()];
+		} else {
+			double num = rand() % sentences.size();
+			return sentences[num];
+		}
+	}
+
+	void printSubSentenceWithProb() {
+		int count = 0;
+		for (int i = 0; i < sentences.size(); i++) {
+			double prob = accumProbs[i] - (i==0 ? 0.0 : accumProbs[i-1]);
+			if (prob == 0) continue;
+			cout << setw(50) << sentences[i] << " " << to_string_with_precision(prob,10) << endl;
+			count++;
+		}
+		cout << "#subsent = " << count << endl; 
+	}
 };
 
 /**
@@ -79,6 +118,7 @@ string sampleWord(string prepre, string pre, int direction, double lamda1, doubl
 SubSentence generatePartOfSentence(string, string);
 string mergeString(string, string);
 
+string generatePartOfParagraphFromKeyword(string keyword, int numSentence, int direction);
 
 void clear(std::queue<WordPath> &q)
 {
@@ -273,10 +313,11 @@ void generateWords(int number, int lenLowerBnd, int lenUpperBnd, vector<string> 
  * For SENTENCE/SENTENCES
  *
  * This function will generate random sentences.
- * GENERATE (10 SHORT SENTENCES) THEN OUTPUT => generateSentences(10, 1, shortSentenceLenUpperBnd, {""})
+ * GENERATE (10 SHORT SENTENCES) BY PROBABILITY THEN OUTPUT => generateSentences(10, 1, shortSentenceLenUpperBnd, {""}, 1)
+ * GENERATE (10 SHORT SENTENCES) THEN OUTPUT => generateSentences(10, 1, shortSentenceLenUpperBnd, {""}, 0)
  */
 
-void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<string> keywords) {
+void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<string> keywords, bool byProb) {
 	if (keywords.size() > 2) {
 		cout << "You should not have more than two keyword." << endl;
 		return;
@@ -284,15 +325,23 @@ void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<stri
 
 	if (keywords.size() == 2) {
 		//TODO
+		SubSentence subsent1 = generatePartOfSentence("<s>", keywords[0]),
+					subsent2 = generatePartOfSentence(keywords[0], keywords[1]),
+					subsent3 = generatePartOfSentence(keywords[1], "<e>");
+
+		for (int i = 0; i < number; i++) {
+			string str = mergeString(subsent1.getRandSubSentence(byProb), subsent2.getRandSubSentence(byProb));
+			cout << mergeString(str, subsent3.getRandSubSentence(byProb)) << endl;
+			
+		}
+		return;
 	}
 
 	if (keywords.size() == 1) {
 		SubSentence subsent1 = generatePartOfSentence("<s>", keywords[0]);
 		SubSentence subsent2 = generatePartOfSentence(keywords[0], "<e>");
 		for (int i = 0; i < number; i++) {
-			int num1 = rand() / subsent1.sentences.size();
-			int num2 = rand() / subsent2.sentences.size();
-			cout << mergeString(subsent1.sentences[num1], subsent2.sentences[num2]) << endl;
+			cout << mergeString(subsent1.getRandSubSentence(byProb), subsent2.getRandSubSentence(byProb)) << endl;
 		}
 		return;
 	}
@@ -385,93 +434,86 @@ SubSentence generatePartOfSentence(string start, string end) {
 
 	while (count < numSentences && (!qFromStart.empty() || !qFromEnd.empty())) {
 		//cout << "count = " << count << endl;
-		switch (turn) {
-			case 0 :
-				//cout << "case 0" << endl;
-				if (!qFromStart.empty()) {
-					WordPath wp = qFromStart.front();
-					qFromStart.pop();
+		if (turn == 0) {
+			//cout << "case 0" << endl;
+			if (!qFromStart.empty()) {
+				WordPath wp = qFromStart.front();
+				qFromStart.pop();
 
-					if (wp.len > partOfSentenceLen) break;
-					if (wp.pre == "<e>") continue;
+				if (wp.len > partOfSentenceLen) break;
+				if (wp.pre == "<e>") continue;
 
-					if (bigram[wp.pre].size() == 0) {
-						//cout << "1:" << endl;
-						for (auto it : unigram) {
-							if (it.first == "<s>") continue;
+				if (bigram[wp.pre].size() == 0) {
+					//cout << "1:" << endl;
+					for (auto it : unigram) {
+						if (it.first == "<s>") continue;
 
-							WordPath tmp = wp;
-							string word = it.first;
-							double prob = unigram[word];
-							
-							if (unigram[word] > 0 && word != "<e>") {
-								tmp.add(word, prob);
-								fromStart[word].push_back(tmp);
-								qFromStart.push(tmp);
-								findPath(results, fromEnd, tmp, sum, count, 0);
-							}
+						WordPath tmp = wp;
+						string word = it.first;
+						double prob = unigram[word];
+						
+						if (unigram[word] > 0 && word != "<e>") {
+							tmp.add(word, prob);
+							fromStart[word].push_back(tmp);
+							qFromStart.push(tmp);
+							findPath(results, fromEnd, tmp, sum, count, 0);
 						}
-					} else {
-						//cout << "2:" << endl;
-						for (auto it : bigram[wp.pre]) {
-							WordPath tmp = wp;
-							string word = it.first;
-							double prob = 0.5 * (it.second) + 0.5 * trigram[tmp.prepre + " " + tmp.pre][word];
-							if (prob > 0 && word != "<e>") {
-								tmp.add(word, prob);
-								fromStart[word].push_back(tmp);
-								qFromStart.push(tmp);
-								findPath(results, fromEnd, tmp, sum, count, 0);
-							}
+					}
+				} else {
+					//cout << "2:" << endl;
+					for (auto it : bigram[wp.pre]) {
+						WordPath tmp = wp;
+						string word = it.first;
+						double prob = 0.5 * (it.second) + 0.5 * trigram[tmp.prepre + " " + tmp.pre][word];
+						if (prob > 0 && word != "<e>") {
+							tmp.add(word, prob);
+							fromStart[word].push_back(tmp);
+							qFromStart.push(tmp);
+							findPath(results, fromEnd, tmp, sum, count, 0);
 						}
 					}
 				}
-				break;
+			}
+		} else {
+			//cout << "case 1" << endl;
+			if (!qFromEnd.empty()) {
+				WordPath wp = qFromEnd.front();
+				qFromEnd.pop();
 
-			case 1:
-				//cout << "case 1" << endl;
-				if (!qFromEnd.empty()) {
-					WordPath wp = qFromEnd.front();
-					qFromEnd.pop();
+				if (wp.len > partOfSentenceLen) break;
+				if (wp.pre == "<s>") continue;
 
-					if (wp.len > partOfSentenceLen) break;
-					if (wp.pre == "<s>") continue;
+				if (backwardBigram[wp.pre].size() == 0) {
+					//cout << "1:" << endl;
+					for (auto it : unigram) {
+						if (it.first == "<e>") continue;
 
-					if (backwardBigram[wp.pre].size() == 0) {
-						//cout << "1:" << endl;
-						for (auto it : unigram) {
-							if (it.first == "<e>") continue;
+						WordPath tmp = wp;
+						string word = it.first;
+						double prob = unigram[word];
 
-							WordPath tmp = wp;
-							string word = it.first;
-							double prob = unigram[word];
-
-							if (unigram[word] > 0 && word != "<e>" && word != "<s>") {
-								tmp.addBackward(word, prob);
-								fromEnd[word].push_back(tmp);
-								qFromEnd.push(tmp);
-								findPath(results, fromStart, tmp, sum, count, 1);
-							}
+						if (unigram[word] > 0 && word != "<e>" && word != "<s>") {
+							tmp.addBackward(word, prob);
+							fromEnd[word].push_back(tmp);
+							qFromEnd.push(tmp);
+							findPath(results, fromStart, tmp, sum, count, 1);
 						}
-					} else {
-						//cout << "2:" << endl;
-						for (auto it : backwardBigram[wp.pre]) {
-							WordPath tmp = wp;
-							string word = it.first;
-							double prob = 0.5 * (it.second) + 0.5 * backwardTrigram[tmp.prepre + " " + tmp.pre][word];
-							if (prob > 0 && word != "<e>" && word != "<s>") {
-								tmp.addBackward(word, prob);
-								fromEnd[word].push_back(tmp);
-								qFromEnd.push(tmp);
-								findPath(results, fromStart, tmp, sum, count, 1);
-							}
+					}
+				} else {
+					//cout << "2:" << endl;
+					for (auto it : backwardBigram[wp.pre]) {
+						WordPath tmp = wp;
+						string word = it.first;
+						double prob = 0.5 * (it.second) + 0.5 * backwardTrigram[tmp.prepre + " " + tmp.pre][word];
+						if (prob > 0 && word != "<e>" && word != "<s>") {
+							tmp.addBackward(word, prob);
+							fromEnd[word].push_back(tmp);
+							qFromEnd.push(tmp);
+							findPath(results, fromStart, tmp, sum, count, 1);
 						}
 					}
 				}
-				break;
-			
-			default:
-				break;
+			}
 		}
 		turn = !turn;
 	}
@@ -544,11 +586,11 @@ void test_generateWords() {
 
 void test_generateSentences() {
 	vector<string> keywords;
-	//generateSentences(2, 1, INT_MAX, keywords);
+	//generateSentences(2, 1, INT_MAX, keywords, 0);
 	//cout << endl;
-	//generateSentences(1, 1, shortSentenceLenUpperBnd, keywords);
-	keywords = {"a"};
-	generateSentences(10, 1, shortSentenceLenUpperBnd, keywords);
+	//generateSentences(1, 1, shortSentenceLenUpperBnd, keywords, 0);
+	keywords = {"you", "king"};
+	generateSentences(10, 1, shortSentenceLenUpperBnd, keywords, 1);
 }
 
 void test_generatePartOfSentence() {
@@ -563,11 +605,92 @@ void test_generatePartOfSentence() {
 
 	generatePartOfSentence("<s>", "<e>");	
 	//cout << generatePartOfSentence("<s>", "made") << endl;
+
+	SubSentence subsent1 = generatePartOfSentence("king", "land");
+	SubSentence subsent2 = generatePartOfSentence("cat", "run");
+	//subsent1.printSubSentenceWithProb();
+}
+
+
+/**
+ * For PARAGRAPH/PARAGRAPHS
+ *
+ * GENERATE (10 PARAGRAPHS) THEN OUTPUT => generateSentences(10, 1, INT_MAX, {""}, 0)
+ * GENERATE (10 SHORT SENTENCES) THEN OUTPUT => generateSentences(10, 1, shortSentenceLenUpperBnd, {""}, 0)
+ */
+
+void generateParagraphs(int number, int lenLowerBnd, int lenUpperBnd, vector<string> keywords, bool byProb) {
+	random_device rd;
+	mt19937 gen(rd());
+
+	normal_distribution<double> d(6,1.5), d1(3,1.5), d3(2,1.5);
+
+	if (keywords.size() > 2) {
+		cout << "You should not have more than two keyword." << endl;
+		return;
+	}
+
+	// TODO
+	if (keywords.size() == 2) {}
+
+	
+
+	if (keywords.size() == 1) {
+		for (int i = 0; i < number; i++) {
+			int numSentences1 = max(round(d1(gen)),1.0);
+			int numSentences2 = max(round(d(gen)-numSentences1),1.0);
+			string part1 = generatePartOfParagraphFromKeyword(keywords[0], numSentences1, -1);
+			string part2 = generatePartOfParagraphFromKeyword(keywords[0], numSentences2, 1);
+			cout << mergeString(part1, part2) << endl;
+		}
+		return;
+	}
+
+	for (int i = 0; i < number; i++) {
+		int numSentence = max(round(d(gen)),1.0);
+		cout << generatePartOfParagraphFromKeyword("<s>", numSentence, 1) << endl;
+	}
+}
+
+// direction = +1: forward
+//           = -1: backward
+string generatePartOfParagraphFromKeyword(string keyword, int numSentence, int direction) {
+	string result = keyword;
+	string cur = "", pre = keyword, prepre = "";
+	int count = 0;
+	while (count < numSentence) {
+		cur = sampleWord(prepre, pre, direction, 0.0, 0.5, 0.5);
+		if (direction == 1) {
+			result = result + " " + cur;
+			if (cur == "<e>") count++;
+		} else {
+			result = cur + " " + result;
+			if (cur == "<e>" || cur == "<s>") {
+				count++;
+				cur = "<e>";
+			}
+		}
+		
+		prepre = pre;
+		pre = cur;
+	}
+	return result;
+}
+
+void test_generateParagraphs() {
+	vector<string> keywords;
+	//generateParagraphs(3, 1, 1, keywords, 0);
+
+	keywords = {"war"};
+	generateParagraphs(5, 1, 1, keywords, 0);	
 }
 
 int main(int argc, char **argv) {
 	srand(time(0));
 	rand(); // To prevent the psuedo random generator depend on increasing time.
+
+	
+    
 
 	if (argc != 6) cout << "Usage: ./ngram <unigram_file> <bigram_file> <backward_bigram_file> <trigram_file> <backward_trigram_file>" << endl;
 
@@ -581,8 +704,9 @@ int main(int argc, char **argv) {
 	//generateWord(sentenceLength);
 	//test_sampleWord();
 	//test_generateWords();
-	test_generateSentences();
+	//test_generateSentences();
 	//test_generatePartOfSentence();
-	
+	test_generateParagraphs();
+
 	return 0;
 }
