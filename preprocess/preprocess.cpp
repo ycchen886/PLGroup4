@@ -5,6 +5,7 @@
 #include <cctype>
 #include <codecvt>
 #include <set>
+#include <locale>
 #include "utf8.h"
 
 using namespace std;
@@ -44,15 +45,10 @@ struct Word {
 	Word(): pre(""), mid(""), post(""), cleanword("") {};
 	Word(string _pre, string _mid, string _post, string _cleanword): 
 		pre(_pre), mid(_mid), post(_post), cleanword(_cleanword) {};
-
-	void updateCleanWord() {
-		cleanword = pre + " " + mid + " " + post;
-		if (cleanword[0] == ' ') cleanword = cleanword.substr(1);
-		if (cleanword[cleanword.size()-1] == ' ') cleanword = cleanword.substr(0, cleanword.size()-1);
-	}
 };
 
 string UnicodeToUTF8(unsigned int);
+bool isAllUpperWord(string);
 bool isEndOfSentence(string);
 bool isAbbreviation(string);
 
@@ -60,13 +56,6 @@ bool isAbbreviation(string);
 string addMidTag(Word w1, Word w2) {
 	if (!isAbbreviation(w1.mid) && isEndOfSentence(w1.post) && isupper(w2.mid[0])) {
 		return w1.cleanword + " <m>";
-	}
-
-	if (isAbbreviation(w1.mid) && w1.post.size() > 0 && w1.post[0] == '.') {
-		w1.mid += ".";
-		if (w1.post.size() > 1 && w1.post[1] == ' ') w1.post = w1.post.substr(2);
-		else w1.post = w1.post.substr(1);
-		w1.updateCleanWord();
 	}
 	return w1.cleanword;
 }
@@ -106,6 +95,12 @@ Word clean_UTF8(string word) {
 	}
 
 	string midword(it1, it2);
+
+	if ((isAbbreviation(midword) || isAllUpperWord(midword)) && postword.size() > 0 && postword[0] == '.'){
+		midword += ".";
+		if (postword.size() > 1 && postword[1] == ' ') postword = postword.substr(2);
+		else postword = postword.substr(1);
+	}
 
 	string cleanword = preword + " " + midword + " " + postword;
 	if (cleanword[0] == ' ') cleanword = cleanword.substr(1);
@@ -182,6 +177,33 @@ string UnicodeToUTF8(unsigned int codepoint){
 	return out;
 }
 
+bool isAllUpperWord(string str) {
+	// all are A-Z a-z
+	string result = "";
+	int n = utf8::distance(str.begin(), str.end()), i;
+
+	uint32_t cur = 0;
+	string::iterator b = str.begin(), e = str.end();
+	string::iterator it;
+
+	for (i = 0, it = b; i < n; i++) {
+		cur = utf8::next(it,e);
+		if (!isupper(cur)) return false;
+	}
+	return true;
+}
+
+string getLastChar(string paragraph) {
+	string::iterator it, b = paragraph.begin();
+	uint32_t cur = 0;
+
+	for (it = paragraph.end(); it != paragraph.begin(); ) {
+		cur = utf8::previous(it, b);
+		if (UnicodeToUTF8(cur) != " ") return UnicodeToUTF8(cur);
+	}
+	return "";
+}
+
 // Tests for clean_UTF8
 void test() {
 	cout << clean_UTF8("...,...however...,...").cleanword << endl;
@@ -195,6 +217,13 @@ void test() {
 	cout << clean_UTF8("I””””").cleanword << endl;
 	cout << clean_UTF8(",I.").cleanword << endl;
 	cout << clean_UTF8(",II.").cleanword << endl;
+	cout << clean_UTF8("_etc._").cleanword << endl;
+	cout << clean_UTF8("etc...").cleanword << endl;
+	cout << clean_UTF8(",,,etc.").cleanword << endl;
+
+	cout << isAllUpperWord("HelloWorld””””Iam") << endl;
+	cout << isAllUpperWord("11AT") << endl;
+	cout << isAllUpperWord("AT") << endl;
 }
 
 int main(int argc, char **argv) {
@@ -211,11 +240,20 @@ int main(int argc, char **argv) {
 	int countParagraph = 0;
 
 	while (getline(infile, line)) {
+		int countLine = 0;
 		string paragraph = line;
 		while (line.find_first_not_of(" \t\n\v\f\r") != string::npos && getline(infile, line)) {
 			paragraph = paragraph + " " + line;
+			countLine++;
 		}
 		if (paragraph.find_first_not_of(" \t\n\v\f\r") == string::npos) continue;
+
+		// If the number of lines in the paragraph is 1, then don't parse the paragraph.
+		if (countLine <= 2) continue;
+
+		// If the last char in the paragraph is invalid, then don't parse the paragraph.
+		string lastChar = getLastChar(paragraph);
+		if (lastChar != "." && lastChar != "?" && lastChar != "!" && lastChar != "”") continue;
 
 		istringstream iss(paragraph);
 		string word;
@@ -239,5 +277,6 @@ int main(int argc, char **argv) {
 
 	cout << "#paragraph: " << countParagraph << endl;
 
+	test();
 	return 0;
 }
