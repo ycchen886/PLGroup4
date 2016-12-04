@@ -1,5 +1,6 @@
 package markovDSL;
 
+import sys.process._
 import scala.language.postfixOps
 
 class MarkovDSL {
@@ -37,6 +38,23 @@ class MarkovDSL {
 	class ProgramState(var numText : NumText, var subject: String = "") {
 		def ON(subject: String) = { this subject = subject; this }
 		def ABOUT(subject: String) = { this subject = subject; this }
-		def THEN(o: OutputWord) = { println(f"${numText.amount} ${numText.length} ${numText.textType} ABOUT $subject\n") }
+		def THEN(o: OutputWord) = {
+			var commands = "";
+
+			commands += f"-num ${numText.amount} "
+
+			if (numText.length != null) {
+				commands += f"-length ${numText.length} "
+			}
+
+			commands += f"-type ${numText.textType} "
+
+			if (subject != "") {
+				commands += f"-keywords $subject"
+			}
+
+
+			println (f"./markovDSL/test $commands" !)
+		}
 	}
 }
