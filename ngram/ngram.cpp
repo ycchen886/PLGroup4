@@ -29,10 +29,14 @@ using namespace std;
 
 int shortWordLenUpperBnd = 4, longWordLenLowerBnd = 12;
 int shortSentenceLenUpperBnd = 7, longSentenceLenLowerBnd = 20, maxSentenceLen = 50;
-int shortParagraphLenUpperBnd = 5, longParagraphLenLowerBnd = 7, maxParagraphLen = 15;
+int shortParagraphLenUpperBnd = 4, longParagraphLenLowerBnd = 7, maxParagraphLen = 15;
 
 unordered_map<string, double> unigram;
 unordered_map<string, unordered_map<string, double>> bigram, trigram, backwardBigram, backwardTrigram;
+
+int num = -1;
+string type = "", length = "";
+vector<string> keywords;
 
 // util
 template <typename T>
@@ -134,6 +138,7 @@ struct SubSentence {
 struct SubParagraph {
 	vector<string> vecParagraph;
 	string paragraph;
+	int numSentence;
 
 	SubParagraph(string _paragraph): paragraph(_paragraph) {
 		initialVecParagraph(_paragraph);
@@ -143,7 +148,9 @@ struct SubParagraph {
 		istringstream iss(str);
 		string cur;
 		while (iss >> cur) {
-			vecParagraph.push_back(cur);
+			if (cur != "<s>" && cur != "<e>") {
+				vecParagraph.push_back(cur);
+			} else numSentence++;
 		}
 	}
 
@@ -171,6 +178,7 @@ string generatePartOfSentence2(string start, string end, int lenLowerBnd, int le
 
 SubParagraph generatePartOfParagraphFromKeyword(string keyword, int numSentence, int direction);
 string generatePartOfParagraph(string start, string end, int numSentence);
+int numSentenceByLength();
 
 void clear(std::queue<WordPath> &q)
 {
@@ -415,7 +423,7 @@ void generateSentences(int number, int lenLowerBnd, int lenUpperBnd, vector<stri
 			}
 			
 		} else {
-			int numSen1 = rand()%number, numSen2 = number - numSen1;
+			int numSen1 = rand()%(number+1), numSen2 = number - numSen1;
 
 			SubSentence subsent1 = generatePartOfSentence("<s>", keywords[0], lenUpperBnd),
 						subsent2 = generatePartOfSentence(keywords[0], keywords[1], lenUpperBnd),
@@ -529,6 +537,11 @@ void clearTag(string &str) {
 		if (word != "<s>" && word != "<e>") result += word + " ";
 	}
 	str = result;
+}
+
+int getIntFromUniformDist(int lower, int upper) {
+	int range = upper - lower + 1;
+	return rand() % range + lower; 
 }
 
 /*
@@ -884,24 +897,27 @@ void generateParagraphs(int number, int lenLowerBnd, int lenUpperBnd, vector<str
 	random_device rd;
 	mt19937 gen(rd());
 
-	normal_distribution<double> d(6,1.5), d1(3,1.5), d2(2,1.5);
+	normal_distribution<double> d1(3,1), d2(1.5,0.5);
+	int numSentence = 1;
+	
 
 	if (keywords.size() > 2) {
 		cout << "You should not have more than two keyword." << endl;
 		return;
 	}
 
-	// TODO
 	if (keywords.size() == 2) {
 		int maxIter = 10000, iter = 0;
 		for (int i = 0; i < number; i++) {
+			numSentence = numSentenceByLength();
+
 			if (iter > maxIter) {
 				cout <<  "Cannot generate paragraph with " << keywords[0] << " and " << keywords[1] << "." << endl;
 				break;
 			}
 
 			int numSentences1 = max(round(d2(gen)),1.0), numSentences2 = max(round(d2(gen)),2.0), 
-				numSentences3 = max(round(d(gen) - numSentences1 - numSentences2),1.0);
+				numSentences3 = max(round(numSentence - numSentences1 - numSentences2),1.0);
 			string part1 = generatePartOfParagraphFromKeyword(keywords[0], numSentences1, -1).paragraph;
 			string part2 = generatePartOfParagraph(keywords[0], keywords[1], numSentences2);
 			string part3 = generatePartOfParagraphFromKeyword(keywords[1], numSentences3, 1).paragraph;
@@ -913,7 +929,7 @@ void generateParagraphs(int number, int lenLowerBnd, int lenUpperBnd, vector<str
 			string output = mergeString(tmp, part3);
 			clearTag(output);
 			cout << output << endl << endl;
-			
+
 			iter++;
 		}
 		return;
@@ -923,8 +939,10 @@ void generateParagraphs(int number, int lenLowerBnd, int lenUpperBnd, vector<str
 
 	if (keywords.size() == 1) {
 		for (int i = 0; i < number; i++) {
+			numSentence = numSentenceByLength();
+
 			int numSentences1 = max(round(d1(gen)),1.0);
-			int numSentences2 = max(round(d(gen)-numSentences1),1.0);
+			int numSentences2 = max(round(numSentence-numSentences1),1.0);
 			SubParagraph part1 = generatePartOfParagraphFromKeyword(keywords[0], numSentences1, -1);
 			SubParagraph part2 = generatePartOfParagraphFromKeyword(keywords[0], numSentences2, 1);
 			string output = mergeString(part1.paragraph, part2.paragraph);
@@ -935,12 +953,25 @@ void generateParagraphs(int number, int lenLowerBnd, int lenUpperBnd, vector<str
 	}
 
 	for (int i = 0; i < number; i++) {
-		int numSentence = max(round(d(gen)),1.0);
+		numSentence = numSentenceByLength();
 		//SubParagraph pg = generatePartOfParagraphFromKeyword("<s>", numSentence, 1);
 		string output = generatePartOfParagraphFromKeyword("<s>", numSentence, 1).paragraph;
 		clearTag(output);
 		cout << output << endl << endl;
 	}
+}
+
+int numSentenceByLength() {
+	random_device rd;
+	mt19937 gen(rd());
+	normal_distribution<double> d(6,1.5);
+	int numSentence;
+
+	if (length == "SHORT") numSentence = getIntFromUniformDist(1, shortParagraphLenUpperBnd);
+	else if (length == "LONG") numSentence = getIntFromUniformDist(longParagraphLenLowerBnd, maxParagraphLen);
+	else numSentence = max(round(d(gen)),1.0);
+
+	return numSentence;
 }
 
 // direction = +1: forward
@@ -1045,10 +1076,6 @@ int main(int argc, char **argv) {
 	readBackwardBigram(argv[3]);
 	readTrigram(argv[4]);
 	readBackwardTrigram(argv[5]);
-
-	int num = -1;
-	string type = "", length = "";
-	vector<string> keywords;
 
 	for (int i = 6; i < argc; i++) {
 		string arg(argv[i]);
