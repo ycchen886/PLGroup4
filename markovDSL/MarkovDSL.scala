@@ -11,23 +11,23 @@ class MarkovDSL {
 
 	trait Type { var textType : String }
 
-	object WORD extends Type { var textType = "WORDS" }
-	object WORDS extends Type { var textType = "WORDS" }
-	object SENTENCE extends Type { var textType = "SENTENCES" }
-	object SENTENCES extends Type { var textType = "SENTENCES" }
-	object PARAGRAPH extends Type { var textType = "PARAGRAPHS" }
-	object PARAGRAPHS extends Type { var textType = "PARAGRAPHS" }
+	object WORD extends Type { var textType = "WORD" }
+	object WORDS extends Type { var textType = "WORD" }
+	object SENTENCE extends Type { var textType = "SENTENCE" }
+	object SENTENCES extends Type { var textType = "SENTENCE" }
+	object PARAGRAPH extends Type { var textType = "PARAGRAPH" }
+	object PARAGRAPHS extends Type { var textType = "PARAGRAPH" }
 
 
 	case class NumText(var amount: Int, var textType: String, var length : String)
 
 	implicit class IntToNumText(amount: Int) {
-		def WORD : NumText = { new NumText(amount, "WORDS", null) }
-		def WORDS : NumText = { new NumText(amount, "WORDS", null) }
-		def SENTENCE : NumText = { new NumText(amount, "SENTENCES", null) }
-		def SENTENCES : NumText = { new NumText(amount, "SENTENCES", null) }
-		def PARAGRAPH : NumText = { new NumText(amount, "PARAGRAPHS", null) }
-		def PARAGRAPHS : NumText = { new NumText(amount, "PARAGRAPHS", null) }
+		def WORD : NumText = { new NumText(amount, "WORD", null) }
+		def WORDS : NumText = { new NumText(amount, "WORD", null) }
+		def SENTENCE : NumText = { new NumText(amount, "SENTENCE", null) }
+		def SENTENCES : NumText = { new NumText(amount, "SENTENCE", null) }
+		def PARAGRAPH : NumText = { new NumText(amount, "PARAGRAPH", null) }
+		def PARAGRAPHS : NumText = { new NumText(amount, "PARAGRAPH", null) }
 		def SHORT(t : Type) : NumText = { new NumText(amount, t.textType, "SHORT") }
 		def LONG(t : Type) : NumText = { new NumText(amount, t.textType, "LONG") }
 	}
@@ -53,8 +53,8 @@ class MarkovDSL {
 				commands += f"-keywords $subject"
 			}
 
-
-			println (f"./markovDSL/test $commands" !)
+            println(commands)
+			println (f"./ngram/ngram data/1_uni.out data/1_bi.out data/1_bbi.out data/1_tri.out data/1_btri.out $commands" !)
 		}
 	}
 }
