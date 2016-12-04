@@ -19,6 +19,9 @@ perl -0777 -p -e 's|\n\n\[Illustration.*\]\n\n| |g' $infile > $tmpfile1
 # append the indented paragraph to its previous one
 perl -0777 -p -e 's|(\n\n) +| |g' $tmpfile1 > $tmpfile2
 
+# replace "--" with " " 
+perl -0777 -p -e 's|--| |g' $tmpfile1 > $tmpfile2
+
 # add <s>, <m>, <e> tag
 ./preprocess $tmpfile2 $tmpfile3
 
