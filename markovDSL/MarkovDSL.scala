@@ -54,7 +54,9 @@ class MarkovDSL {
 			}
 
             println(commands)
-			println (f"./ngram/ngram data/1_uni.out data/1_bi.out data/1_bbi.out data/1_tri.out data/1_btri.out $commands" !)
+            
+			println (f"./ngram/ngram data/1_uni.out data/1_bi.out data/1_bbi.out data/1_tri.out data/1_btri.out $commands" !!)
+			//println (f"./ngram/ngram data/Trump/all_Trump_uni.out data/Trump/all_Trump_bi.out data/Trump/all_Trump_bbi.out data/Trump/all_Trump_tri.out data/Trump/all_Trump_btri.out $commands" !!)
 		}
 	}
 }
