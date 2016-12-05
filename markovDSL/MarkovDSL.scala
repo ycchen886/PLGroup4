@@ -35,9 +35,13 @@ class MarkovDSL {
 	abstract sealed class OutputWord
 	object OUTPUT extends OutputWord
 
-	class ProgramState(var numText : NumText, var subject: String = "") {
+	abstract sealed class TrumpWord
+	object TRUMP extends TrumpWord
+
+	class ProgramState(var numText : NumText, var subject: String = "", var trump: Boolean = false) {
 		def ON(subject: String) = { this subject = subject; this }
 		def ABOUT(subject: String) = { this subject = subject; this }
+		def LIKE(trump: TrumpWord) = { this trump = true; this}
 		def THEN(o: OutputWord) = {
 			var commands = "";
 
@@ -53,10 +57,15 @@ class MarkovDSL {
 				commands += f"-keywords $subject"
 			}
 
-            println(commands)
-            
-			println (f"./ngram/ngram data/1_uni.out data/1_bi.out data/1_bbi.out data/1_tri.out data/1_btri.out $commands" !!)
-			//println (f"./ngram/ngram data/Trump/all_Trump_uni.out data/Trump/all_Trump_bi.out data/Trump/all_Trump_bbi.out data/Trump/all_Trump_tri.out data/Trump/all_Trump_btri.out $commands" !!)
+			println(if (trump) (commands + " -trump") else commands)
+
+			if (trump) {
+				commands = f"./ngram/ngram data/Trump/all_Trump_uni.out data/Trump/all_Trump_bi.out data/Trump/all_Trump_bbi.out data/Trump/all_Trump_tri.out data/Trump/all_Trump_btri.out $commands"
+			} else {
+				commands = f"./ngram/ngram data/1_uni.out data/1_bi.out data/1_bbi.out data/1_tri.out data/1_btri.out $commands"
+			}
+
+            println(commands !!)
 		}
 	}
 }
