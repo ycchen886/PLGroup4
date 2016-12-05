@@ -7,3 +7,4 @@ object Test extends MarkovDSL {
 		GENERATE (1 LONG PARAGRAPH) ABOUT "wall" LIKE TRUMP THEN OUTPUT
 	}
 }
+Example 
